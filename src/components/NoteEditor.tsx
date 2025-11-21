@@ -21,6 +21,7 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
   const [labels, setLabels] = useState<string[]>([]);
   const [labelInput, setLabelInput] = useState('');
   const [showColorPicker, setShowColorPicker] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const titleRef = useRef<HTMLInputElement>(null);
   const contentRef = useRef<HTMLTextAreaElement>(null);
 
@@ -42,12 +43,16 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
     }, 100);
   }, [note]);
 
-  const handleSave = () => {
+  const handleSave = async () => {
+    // If both title and content are empty, just close without saving
     if (!title.trim() && !content.trim()) {
       onClose();
       return;
     }
 
+    setIsSaving(true);
+    
+    // Save the note
     onSave({
       title: title.trim(),
       content: content.trim(),
@@ -57,10 +62,14 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
       archived: note?.archived || false,
     });
 
+    // Small delay for visual feedback
+    await new Promise(resolve => setTimeout(resolve, 200));
+
     setTitle('');
     setContent('');
     setColor('#ffffff');
     setLabels([]);
+    setIsSaving(false);
     onClose();
   };
 
@@ -237,11 +246,24 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
                 </button>
               )}
               <button
-                className="px-4 py-2 text-sm rounded hover:bg-base-content/10"
+                className="px-4 py-2 text-sm rounded hover:bg-base-content/10 opacity-60"
                 style={{ color: getTextColor(color) }}
-                onClick={handleSave}
+                onClick={onClose}
               >
-                Close
+                Cancel
+              </button>
+              <button
+                className="px-4 py-2 text-sm rounded font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                style={{ 
+                  color: getTextColor(color),
+                  backgroundColor: getTextColor(color) === '#1f2937' 
+                    ? 'rgba(0,0,0,0.15)' 
+                    : 'rgba(255,255,255,0.25)',
+                }}
+                onClick={handleSave}
+                disabled={isSaving}
+              >
+                {isSaving ? 'Saving...' : 'Save'}
               </button>
             </div>
           </div>

@@ -107,10 +107,12 @@ shogun-notes/
 
 ## Notes Storage
 
-Notes are stored in GunDB under the user's profile:
-- Path: `user().get('notes').get(noteId)`
-- Each note is synced across all devices where you're logged in
-- Notes are stored in a decentralized manner across GunDB peers
+Notes are stored in GunDB in the user's private space and encrypted:
+- **Storage Path**: `user().get('notes').get(noteId)`
+- **Encryption**: All notes are encrypted using GunDB SEA (Security, Encryption, Authorization) with the user's private key (epriv)
+- **Privacy**: Notes are stored in the user's private space, accessible only to the authenticated user
+- **Sync**: Each note is synced across all devices where you're logged in
+- **Decentralization**: Notes are stored in a decentralized manner across GunDB peers, but remain encrypted and private
 
 ## Available Scripts
 

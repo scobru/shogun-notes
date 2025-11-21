@@ -51,6 +51,7 @@ export const NotesApp: React.FC = () => {
       updateNote(editingNote.id, noteData);
       setEditingNote(null);
     } else {
+      console.log('handleSave called, creating note:', noteData);
       createNote(noteData);
       setShowNewEditor(false);
     }
