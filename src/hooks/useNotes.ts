@@ -104,17 +104,9 @@ export function useNotes() {
     // Access SEA from gun instance (TypeScript cast needed)
     const SEA = (gun as any).SEA || (globalThis as any).Gun?.SEA || (globalThis as any).SEA;
     
-    console.log('[useNotes] Loading notes...', { 
-      hasGun: !!gun, 
-      hasUser: !!user, 
-      hasSEA: !!SEA,
-      userIs: user.is 
-    });
-    
     // Ensure user is authenticated
     const userIs = user.is;
     if (!userIs) {
-      console.log('[useNotes] User not authenticated, stopping load');
       setLoading(false);
       return;
     }
@@ -123,7 +115,6 @@ export function useNotes() {
     // Path in GunDB: user().get('notes').get(noteId)
     // All notes are encrypted with user's private key (epriv) using SEA
     const notesRef = user.get('notes');
-    console.log('[useNotes] Subscribing to notes changes');
     const notesMap: Record<string, Note> = {}; 
     let hasReceivedData = false;
 
@@ -133,7 +124,6 @@ export function useNotes() {
 
     // Helper function to process decrypted note data
     const processNoteData = (key: string, noteData: any) => {
-      console.log('[useNotes] Processing note data:', { key, hasTitle: !!noteData?.title });
       
       // Parse labels from JSON string if it's a string
       let labels: string[] = [];
@@ -180,7 +170,6 @@ export function useNotes() {
           return b.updatedAt - a.updatedAt;
         });
 
-        console.log('[useNotes] Setting notes:', notesList.length);
         setNotes(notesList);
         setLoading(false);
       }, 100);
@@ -220,7 +209,6 @@ export function useNotes() {
           updateTimeout = null;
         }
         
-        console.log('[useNotes] Note deleted:', key, 'Total notes:', notesList.length);
         setNotes(notesList);
         setLoading(false);
         return;
@@ -250,7 +238,6 @@ export function useNotes() {
             processNoteData(key, decrypted);
           } else {
             // Decryption failed, try to process as unencrypted (backward compatibility)
-            console.warn('Failed to decrypt note, trying unencrypted format:', key);
             if (isUnencryptedNote) {
               processNoteData(key, noteData);
             }
@@ -266,27 +253,18 @@ export function useNotes() {
         // Note is not encrypted or SEA not available, process directly
         if (isUnencryptedNote) {
           processNoteData(key, noteData);
-        } else {
-          // Unknown format, log for debugging
-          console.warn('Unknown note format:', key, typeof noteData, noteData);
         }
       }
     };
 
     // Subscribe to changes
     notesRef.map().on(updateNotes);
-    
-    console.log('[useNotes] Subscribed to notes, waiting for data...');
 
     // Immediate check: if there are no notes, stop loading faster
     // Use once() to check if there are any notes at all
-    notesRef.map().once((data: any, key: string) => {
-      // This will fire once when the initial data is loaded (even if empty)
-      console.log('[useNotes] Initial data check:', { key, hasData: !!data, dataType: typeof data });
-      
+    notesRef.map().once((_data: any, key: string) => {
       // If we get an empty response (no key), it means there are no notes
       if (!key) {
-        console.log('[useNotes] No notes found, stopping load');
         if (!hasReceivedData) {
           hasReceivedData = true;
           setNotes([]);
@@ -302,33 +280,22 @@ export function useNotes() {
     // Fallback timeout: if no data arrives in 3 seconds, assume empty
     // This handles cases where GunDB takes time to respond or notes are empty
     const timeoutId = setTimeout(() => {
-      console.log('[useNotes] Timeout reached:', { 
-        hasReceivedData, 
-        pendingCount: Object.keys(pendingUpdates).length,
-        notesMapCount: Object.keys(notesMap).length,
-        loading
-      });
-      
       if (!hasReceivedData) {
-        console.log('[useNotes] Timeout: No notes received, assuming empty');
         hasReceivedData = true;
         setNotes([]);
         setLoading(false);
       } else if (loading && Object.keys(pendingUpdates).length === 0 && Object.keys(notesMap).length === 0) {
         // We received data but no valid notes were processed
-        console.log('[useNotes] Timeout: Received data but no valid notes found, stopping load');
         setNotes([]);
         setLoading(false);
       } else if (loading) {
         // Force stop loading if we have any notes
-        console.log('[useNotes] Timeout: Force stopping load, have notes');
         setLoading(false);
       }
     }, 3000);
 
     return () => {
       // Cleanup
-      console.log('[useNotes] Cleaning up notes listener');
       clearTimeout(timeoutId);
       if (updateTimeout) {
         clearTimeout(updateTimeout);
@@ -336,7 +303,7 @@ export function useNotes() {
       try {
         notesRef.map().off();
       } catch (e) {
-        console.warn('[useNotes] Error unsubscribing:', e);
+        // Silent fail on unsubscribe
       }
     };
   }, [isLoggedIn, core, userPub]);
@@ -353,7 +320,7 @@ export function useNotes() {
     // });
 
     if (!core?.gun) {
-      console.error('Cannot create note: GunDB instance not available', { core, hasGun: !!core?.gun });
+      console.error('Cannot create note: GunDB instance not available');
       alert('Error: GunDB not available. Please refresh the page and try again.');
       return;
     }
@@ -394,7 +361,7 @@ export function useNotes() {
           notesRef.get(noteId).put(encrypted);
         } else {
           // Fallback: save unencrypted if encryption fails
-          console.warn('Encryption failed, saving unencrypted note');
+          // Encryption failed, save unencrypted as fallback
           notesRef.get(noteId).put(noteForGunDB);
         }
       };
@@ -458,7 +425,7 @@ export function useNotes() {
           noteRef.put(encrypted);
         } else {
           // Fallback: save unencrypted if encryption fails
-          console.warn('Encryption failed, saving unencrypted note');
+          // Encryption failed, save unencrypted as fallback
           noteRef.put(updateData);
         }
       };
@@ -530,17 +497,13 @@ export function useNotes() {
   // Delete a note
   const deleteNote = useCallback((id: string) => {
     if (!isLoggedIn || !core?.gun || !userPub) {
-      console.warn('[useNotes] Cannot delete note: not logged in or GunDB not available');
+      // Cannot delete: not authenticated or GunDB not available
       return;
     }
 
-    console.log('[useNotes] Deleting note:', id);
-    
     // Optimistically update UI immediately (before GunDB confirmation)
     setNotes((currentNotes) => {
-      const filtered = currentNotes.filter(note => note.id !== id);
-      console.log('[useNotes] Optimistically removed note, remaining:', filtered.length);
-      return filtered;
+      return currentNotes.filter(note => note.id !== id);
     });
 
     try {
@@ -550,7 +513,6 @@ export function useNotes() {
       
       // Delete from GunDB (this will trigger the listener which will also update state)
       notesRef.get(id).put(null);
-      console.log('[useNotes] Note deletion sent to GunDB:', id);
     } catch (error) {
       console.error('[useNotes] Error deleting note:', error);
       // Revert optimistic update on error by reloading notes
