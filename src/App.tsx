@@ -25,7 +25,7 @@ import "shogun-relays";
 declare global {
   interface Window {
     ShogunRelays: {
-      forceListUpdate: () => Promise<string[]>;
+      forceListUpdate: (options?: any) => Promise<string[]>;
     };
     shogunDebug?: {
       clearAllData: () => void;
@@ -54,10 +54,7 @@ const MainApp: React.FC<MainAppProps> = () => {
           <div className="navbar-title">
             <img src={logo} alt="Shogun Notes" className="w-12 h-12" />
             <div>
-              <span className="font-semibold">Shogun Notes</span>
-              <p className="navbar-subtitle">
-                Decentralized notes with GunDB
-              </p>
+              <span className="font-semibold">Notes</span>
             </div>
           </div>
           <div className="flex items-center gap-4">
@@ -201,7 +198,12 @@ function App() {
     async function fetchRelays() {
       try {
         setIsLoadingRelays(true);
-        const fetchedRelays = await window.ShogunRelays.forceListUpdate();
+        const fetchedRelays = await window.ShogunRelays.forceListUpdate({
+          axe: true,
+          wire: true,
+          localStorage: false,
+          radisk: false,
+        });
 
         console.log("Fetched relays:", fetchedRelays);
 
