@@ -211,13 +211,13 @@ function App() {
         const peersToUse =
           fetchedRelays && fetchedRelays.length > 0
             ? fetchedRelays
-            : ["https://peer.wallie.io/gun"];
+            : ["https://shogun-relays.scobrudot.dev", "https://peer.wallie.io/gun"];
 
         setRelays(peersToUse);
       } catch (error) {
         console.error("Error fetching relays:", error);
         // Fallback to default peer
-        setRelays(["https://peer.wallie.io/gun"]);
+        setRelays(["https://shogun-relays.scobrudot.dev","https://peer.wallie.io/gun"]);
       } finally {
         setIsLoadingRelays(false);
       }
